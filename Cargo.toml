@@ -1,8 +1,13 @@
 [package]
 name = "babash"
-version = "0.1.0"
-authors = ["imbolc <me@imbolc.name>"]
+version = "0.1.1"
+description = "An tiny wrapper around `std::process::Command`"
+repository = "https://github.com/imbolc/babash"
+keywords = ["command", "run", "cmd", "subprocess", "process"]
 edition = "2018"
+authors = ["imbolc <me@imbolc.name>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
 
 [dependencies]
 log = "0.4"
