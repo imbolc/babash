@@ -1,56 +1,69 @@
-//! An tiny wrapper on `std::process::Command`
+//! An tiny wrapper around `std::process::Command`
 use std::io;
 use std::process::{Command, Output};
 
 #[derive(Debug)]
 pub struct Response {
     pub command: String,
+    pub code: Option<i32>,
     pub success: bool,
     pub stdout: String,
     pub stderr: String,
 }
 
-/// Calls a command and returns its result, without checking for success
+impl Response {
+    fn from_output(command: String, output: Output) -> Self {
+        let status = output.status;
+        let success = status.success();
+        let code = status.code();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        Response {
+            command,
+            code,
+            success,
+            stdout,
+            stderr,
+        }
+    }
+}
+
+/// Calls a command and returns its result without checking for success
 pub fn call(command: impl AsRef<str>) -> io::Result<Response> {
-    let command = command.as_ref().to_owned();
-    log::info!("$ {}", command);
-    let output = run_command(&command)?;
-    let status = output.status;
-    let success = status.success();
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-    let resp = Response {
-        command,
-        success,
-        stdout,
-        stderr,
-    };
+    let resp = get_response(command)?;
     log::debug!("{:#?}", &resp);
     Ok(resp)
 }
 
-/// Calls a command and returns an error on bad exit status
+/// Calls a command and produces an error on bad exit status
 pub fn ensure_call(command: impl AsRef<str>) -> io::Result<Response> {
-    let resp = call(command)?;
-    match resp.success {
-        true => Ok(resp),
-        false => Err({
-            log::error!("{:#?}", &resp);
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Error exit status of the command: {:#?}", resp),
-            )
-        }),
+    let resp = get_response(command)?;
+    if resp.success {
+        log::debug!("{:#?}", &resp);
+        Ok(resp)
+    } else {
+        log::error!("{:#?}", &resp);
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Unsuccessful call: {:#?}", resp),
+        ))
     }
 }
 
+pub fn get_response(command: impl AsRef<str>) -> io::Result<Response> {
+    let command = command.as_ref().to_string();
+    log::info!("Calling: {}", command);
+    let output = get_output(&command)?;
+    Ok(Response::from_output(command, output))
+}
+
 #[cfg(target_os = "linux")]
-fn run_command(command: &str) -> io::Result<Output> {
-    Command::new("sh").arg("-c").arg(&command).output()
+fn get_output(command: &str) -> io::Result<Output> {
+    Command::new("sh").arg("-c").arg(command).output()
 }
 
 #[cfg(target_os = "windows")]
-fn run_command(command: &str) -> io::Result<Output> {
+fn get_output(command: &str) -> io::Result<Output> {
     Command::new("cmd").arg("/C").arg(&command).output()
 }
 
