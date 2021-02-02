@@ -29,14 +29,14 @@ impl Response {
 }
 
 /// Calls a command and returns its result without checking for success
-pub fn call(command: impl AsRef<str>) -> io::Result<Response> {
+pub fn call(command: impl Into<String>) -> io::Result<Response> {
     let resp = get_response(command)?;
     log::debug!("{:#?}", &resp);
     Ok(resp)
 }
 
 /// Calls a command and produces an error on bad exit status
-pub fn ensure_call(command: impl AsRef<str>) -> io::Result<Response> {
+pub fn ensure_call(command: impl Into<String>) -> io::Result<Response> {
     let resp = get_response(command)?;
     if resp.success {
         log::debug!("{:#?}", &resp);
@@ -50,8 +50,8 @@ pub fn ensure_call(command: impl AsRef<str>) -> io::Result<Response> {
     }
 }
 
-pub fn get_response(command: impl AsRef<str>) -> io::Result<Response> {
-    let command = command.as_ref().to_string();
+pub fn get_response(command: impl Into<String>) -> io::Result<Response> {
+    let command = command.into();
     log::info!("Calling: {}", command);
     let output = get_output(&command)?;
     Ok(Response::from_output(command, output))
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_error_status() {
-        assert!(ensure_call("unknown-command").is_err());
+        assert!(ensure_call("unknown-command".to_string()).is_err());
     }
 }
 
